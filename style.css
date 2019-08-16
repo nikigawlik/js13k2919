@@ -1,0 +1,28 @@
+canvas {
+    width: 300px;
+    height: 300px;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
+canvas.game {
+    width: auto;
+    border: 1px solid black;
+}
+
+#gameWorld {
+    background-color: #111;
+    margin: auto;
+    overflow: hidden;
+    width: 640px;
+    height: 360px;
+    perspective: 400px;
+}
+
+#canvasStack {
+    /* transform: translate3d(0, 0, 0) rotateZ(12deg); */
+}
+
+#canvasStack canvas {
+    position: absolute;
+}
