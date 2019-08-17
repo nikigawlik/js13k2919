@@ -1,5 +1,4 @@
-// import PatternEditor from "./patternEditor.js";
-// import { perlin2, seed } from "./noise.js";
+import Renderer from "./renderer.js";
 
 class NoiseLayer {
     constructor(w, h) {
@@ -81,6 +80,8 @@ class NoiseLayer {
 
 export default class Generator {
     constructor(size) {
+        this.size = size;
+
         let layers = [1, 1, 1, 1].map(f => new NoiseLayer(f * size, f * size));
         // simulate noise and overlay
         for (let layer of layers) {
@@ -89,48 +90,25 @@ export default class Generator {
             }
         }
 
-        let heightmap = []
-        let bottomLayer = layers[0].data;
-
-        let canvi = [];
-        for (let i = 0; i < layers.length; i++) {
-            canvi.push(document.createElement("canvas"));
-            canvi[i].width = canvi[i].height = size;
-        }
-        let canvidats = canvi.map(c => c.getContext("2d").getImageData(0, 0, size, size));
+        this.floorMap = layers[0].data;
+        this.heightmap = []
 
         for (let p of iterateQGrid(size, size)) {
-            let i = p.y * size + p.x;
-            //(p.y * sim.height / MAX_W) * sim.width + (p.x * sim.width / MAX_W)
-            let height = layers.map((sim) => (1 - sim.data[i])).reduce((a, b) => a + b);
-            height = layers[0].data[i] ? 0 : height;
-
-            // dat.data[i*4] = 
-            // dat.data[i*4 + 1] =
-            // dat.data[i*4 + 2] = val;
-            // dat.data[i*4 + 3] = 255;
-
-
-            for (let j = 0; j < height; j++) {
-                let val = Math.floor(j / layers.length * 155 + 100);
-                let dat = canvidats[j];
-                dat.data[i * 4] =
-                    dat.data[i * 4 + 1] =
-                    dat.data[i * 4 + 2] = val;
-                dat.data[i * 4 + 3] = 255;
-            }
+            let height = layers.map((sim) => (1 - sim.data[p.index])).reduce((a, b) => a + b);
+            height = layers[0].data[p.index] ? 0 : height;
+            this.heightmap[p.index] = height;
         }
+    }
 
-        for (let i = 0; i < layers.length; i++) {
-            canvi[i].getContext("2d").putImageData(canvidats[i], 0, 0);
-            canvi[i].style.transform = `translateZ(${i * 10}px)`
-            // canvi[i].style.transform = `scale3d(${scale},${scale},${scale}) rotateX(45deg) rotateZ(45deg) translate3d(${dx}px, ${dy}px, ${i*depthScale}px) `;
-        }
-
-        let container = document.querySelector("#canvasStack");
-        for (let canvas of canvi) {
-            container.append(canvas);
-        }
+    sampleHeightmap(x, y) {
+        // return 0;
+        // return Math.random() < 0.05? .5 : 0;
+        return this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)];
+    }
+    
+    sampleFloorMap(x, y) {
+        return this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)]
+            + Math.round(x - Math.floor(x));
     }
 }
 
@@ -142,5 +120,16 @@ function* iterateQGrid(w, h) {
 }
 
 window.addEventListener("load", () => {
-    new Generator(64);
+    let gen = new Generator(64);
+    let rend = new Renderer(gen, document.querySelector("canvas.game"));
+    window.setInterval(() => {
+        rend.x+=0.05;
+        rend.angle += 0.01;
+        // rend.z += 0.01;
+        rend.render();
+    }, 1000/30)
 })
+
+function mod(x, n) {
+    return((Math.floor(x)%n)+n)%n;
+}
