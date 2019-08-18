@@ -76,8 +76,6 @@ class NoiseLayer {
     }
 }
 
-// TODO separate logic for drawing and world gen! (and generally clean up this hacky code)
-
 export default class Generator {
     constructor(size) {
         this.size = size;
@@ -93,6 +91,7 @@ export default class Generator {
         this.floorMap = layers[0].data;
         this.heightmap = []
 
+        // calculate height map
         for (let p of iterateQGrid(size, size)) {
             let height = layers.map((sim) => (1 - sim.data[p.index])).reduce((a, b) => a + b);
             height = layers[0].data[p.index] ? 0 : height;
@@ -103,7 +102,10 @@ export default class Generator {
     sampleHeightmap(x, y) {
         // return 0;
         // return Math.random() < 0.05? .5 : 0;
-        return this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)];
+        if(x >= this.size || y >= this.size || x < 0 || y < 0) return 0;
+        return this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)]
+            + (Math.sin(y*3.141569*0.25) + Math.sin(x*3.141569*0.25) - 2) * 0.2 
+        ;
     }
     
     sampleFloorMap(x, y) {
@@ -118,17 +120,6 @@ function* iterateQGrid(w, h) {
             yield { x: x, y: y, index: y*w+x};
         }
 }
-
-window.addEventListener("load", () => {
-    let gen = new Generator(64);
-    let rend = new Renderer(gen, document.querySelector("canvas.game"));
-    window.setInterval(() => {
-        rend.x+=0.05;
-        rend.angle += 0.01;
-        // rend.z += 0.01;
-        rend.render();
-    }, 1000/30)
-})
 
 function mod(x, n) {
     return((Math.floor(x)%n)+n)%n;
