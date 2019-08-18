@@ -15,10 +15,10 @@ export default class Renderer {
         this.horizon = 0.2;
 
         this.carFrame = 1;
+        this.floorCanvas = null;
     }
 
     async load() {
-        // TODO maybe put this in a separate async function and change game logic to only start after load
         this.imgCorolla = await this.loadImages("corolla", 3);
         this.imgTiles = await this.loadImages("tiles", 9);
         // load tile data
@@ -31,6 +31,8 @@ export default class Renderer {
             ctx.drawImage(tile, 0, 0);
             this.tileData.push(ctx.getImageData(0, 0, tile.width, tile.height).data);
         }
+        
+        this.renderFloorTexture();
     }
 
     async loadImages(name, numberOfFrames, format = "png") {
@@ -49,12 +51,39 @@ export default class Renderer {
         return images;
     }
 
+    renderFloorTexture() {
+        let canvas = document.createElement("canvas");
+        let tileW = this.imgTiles[0].width;
+        let tileH = this.imgTiles[0].height;
+        canvas.width = this.generator.size * tileW;
+        canvas.height = this.generator.size * tileH;
+        document.querySelector("footer").append(canvas);
+        let ctx = canvas.getContext("2d");
+        for(let x = 0; x < this.generator.size; x++)
+        for(let y = 0; y < this.generator.size; y++) {
+            ctx.drawImage(this.imgTiles[this.generator.sampleFloorMap(x, y)], x * tileW, y * tileH)
+        }
+
+        this.floorCanvas = canvas;
+        this.floorCanvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    }
+
+    sampleFloor(x, y, lum = 1) {
+        let i = (~~(y*this.imgTiles[0].width) * this.floorCanvas.width + ~~(x*this.imgTiles[0].height)) * 4;
+        return [
+            (1-lum) * 0xcc + lum * this.floorCanvasData[i], 
+            (1-lum) * 0xcc + lum * this.floorCanvasData[i+1], 
+            (1-lum) * 0xcc + lum * this.floorCanvasData[i+2], 
+            (1-lum) * 0xcc + lum * this.floorCanvasData[i+3]
+        ];
+    }
+
     render() {
         let t0 = Date.now();
         const w = this.canvas.width;
         const h = this.canvas.height;
         const d = 180;
-        const farPlane = 1; // not actually a far plane anymore bec. of tangent bias
+        const farPlane = 12; 
         // let nearPlane = .1; // units
         // let fovRatio = 1;
 
@@ -70,9 +99,10 @@ export default class Renderer {
         // for (let screenZ = d; screenZ >= 0; screenZ--) {
         for (let screenZ = 0; screenZ <= d; screenZ++) {
             // iterate from left to right
-            const relDistance = Math.tan(screenZ / d * 1.57) * farPlane
+            // const relDistance = Math.tan(screenZ / d * 1.57) * 0.125 * farPlane; // tangent bias 
+            const relDistance = (screenZ / d)**2 * farPlane; // square bias 
             const rx = relDistance;
-            const lum = (1 - screenZ / d) * 255;
+            const lum = (1 - screenZ / d);
             for (let screenX = 0; screenX < w; screenX++) {
                 const ry = relDistance * (screenX / w * 2 - 1);
                 const x = this.x + cosAngle * rx - sinAngle * ry;
@@ -81,11 +111,13 @@ export default class Renderer {
                 // ~~ ist essentially Math.floor
                 const screenHeight = Math.min(~~((sample - this.z + relDistance) / (relDistance * 2) * h + this.horizon * h), h);
                 // render a vertical scanline
-                const col = sample > 0 ?
-                    [lum, lum, lum]
-                    :
-                    COLOR_TABLE[this.generator.sampleFloorMap(x, y)];
-                ;
+                // const col = sample > 0 ?
+                //     [lum, lum, lum]
+                //     :
+                //     // COLOR_TABLE[this.generator.sampleFloorMap(x, y)];
+                //     this.sampleFloor(x, y);
+                // ;
+                const col = this.sampleFloor(x, y, lum);
                 const buf = depthBuffer[screenX];
                 for (let screenY = buf; screenY < screenHeight; screenY++) {
                     let i = ((h - screenY) * w + screenX) * 4;
@@ -106,10 +138,6 @@ export default class Renderer {
 
         let t = (Date.now() - t0);
         // console.log(`render time: ${t}ms, ${1000/t}fps`);
-        document.querySelector("footer").innerHTML = `render time: ${t}ms, \t${~~(1000 / t)}fps`;
-    }
-
-    sampleFloor() {
-
+        document.querySelector("footer>p").innerHTML = `render time: ${t}ms, \t${~~(1000 / t)}fps`;
     }
 }

@@ -51,7 +51,7 @@ class Car {
         // render
         this.renderer.x = this.x;
         this.renderer.y = this.y;
-        this.renderer.z = 0.35 + this.generator.sampleHeightmap(this.x, this.y);
+        this.renderer.z = 0.25 + this.generator.sampleHeightmap(this.x, this.y);
         this.renderer.angle = this.angle;
         this.renderer.render();
     }

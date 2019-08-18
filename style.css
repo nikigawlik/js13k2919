@@ -8,7 +8,7 @@ canvas.game {
     height: auto;
     padding:0;
     margin: 0;
-    background-color: black;
+    background-color: #ccc;
 }
 
 body {
