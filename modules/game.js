@@ -6,6 +6,7 @@ const ACC = .25 / 30;
 const STEER = 2 / 30;
 const TRACT = 0.1;
 const FRIC = 0.1;
+const BACKFRIC = 0.3;
 
 class Car {
     constructor(renderer, generator) {
@@ -20,30 +21,35 @@ class Car {
     }
 
     update() {
+        let dx, dy, scl;
         let acceleration = (keyIsDown("up") - keyIsDown("down")) * ACC;
         let steering = (keyIsDown("right") - keyIsDown("left"))
         this.renderer.carFrame = -steering+1;
         steering *= STEER;
+        
+        dx = Math.cos(this.angle);
+        dy = Math.sin(this.angle);
+        scl = Math.max(Math.min((dx * this.hspd + dy * this.vspd) * 60, 1), -1);
 
-        this.angle += steering;
+        this.angle += steering * scl;
         this.hspd += Math.cos(this.angle) * acceleration;
         this.vspd += Math.sin(this.angle) * acceleration;
         this.x += this.hspd;
         this.y += this.vspd;
 
         // friction
-
         // sideways
-        let dx = -Math.sin(this.angle);
-        let dy = Math.cos(this.angle);
-        let scl = (dx * this.hspd + dy * this.vspd) * TRACT;
+        dx = -Math.sin(this.angle);
+        dy = Math.cos(this.angle);
+        scl = (dx * this.hspd + dy * this.vspd) * TRACT;
         this.hspd -= scl * dx;
         this.vspd -= scl * dy;
 
         // forw. backw.
         dx = Math.cos(this.angle);
         dy = Math.sin(this.angle);
-        scl = (dx * this.hspd + dy * this.vspd) * FRIC;
+        scl = (dx * this.hspd + dy * this.vspd);
+        scl *= scl > 0? FRIC : BACKFRIC;
         this.hspd -= scl * dx;
         this.vspd -= scl * dy;
 

@@ -102,15 +102,13 @@ export default class Generator {
     sampleHeightmap(x, y) {
         // return 0;
         // return Math.random() < 0.05? .5 : 0;
-        if(x >= this.size || y >= this.size || x < 0 || y < 0) return 0;
-        return this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)]
-            + (Math.sin(y*3.141569*0.25) + Math.sin(x*3.141569*0.25) - 2) * 0.2 
-        ;
+        // if(x >= this.size || y >= this.size || x < 0 || y < 0) return 0;
+        const hm = this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)];
+        return hm || (Math.sin(y*3.141569*0.25) + Math.sin(x*3.141569*0.25) + 0) * 0.2;
     }
     
     sampleFloorMap(x, y) {
-        return this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)]
-            + Math.round(x - Math.floor(x));
+        return this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)];
     }
 }
 
@@ -121,6 +119,6 @@ function* iterateQGrid(w, h) {
         }
 }
 
-function mod(x, n) {
-    return((Math.floor(x)%n)+n)%n;
+export function mod(x, n) {
+    return ~~(((x%n)+n)%n);
 }
