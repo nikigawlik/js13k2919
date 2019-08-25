@@ -104,11 +104,28 @@ export default class Generator {
         // return Math.random() < 0.05? .5 : 0;
         // if(x >= this.size || y >= this.size || x < 0 || y < 0) return 0;
         const hm = this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)];
-        return hm || (Math.sin(y*3.141569*0.25) + Math.sin(x*3.141569*0.25) + 0) * 0.2;
+        return hm || this.sampleGroundHeightmap(x, y);
+    }
+
+    sampleGroundHeightmap(x, y) {
+        return  0 +
+            (Math.sin(y*3.141569*0.25) + Math.sin(x*3.141569*0.25) + 0) * .2;
+            // Math.abs(Math.sin(y*3.141569*1) + Math.sin(x*3.141569*1) + 0) * .1 +
+            // (Math.tan(x) + Math.tan(y)) *0.1 +
+            // Math.atan(x) + Math.atan(y)
+        ;
     }
     
     sampleFloorMap(x, y) {
         return this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)];
+    }
+    
+    setFloorMap(x, y, val) {
+        this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)] = val;
+    }
+    
+    setHeightmap(x, y, val) {
+        this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)] = val;
     }
 }
 

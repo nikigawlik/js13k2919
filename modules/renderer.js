@@ -64,6 +64,7 @@ export default class Renderer {
         this.tileTexture = Texture.fromImage(await this.loadImage("tilemap"));
         
         this.renderFloorTexture();
+        this.renderMinimap();
     }
 
     async loadImage(name, format = "png") {
@@ -116,12 +117,13 @@ export default class Renderer {
                 const adjDir = (dir+2)%4;
                 const id = baseID * 2 + this.generator.sampleFloorMap(x + COS[adjDir], y + SIN[adjDir]);
                 // id = 0;
+                let fac = baseID == 0? (2+COS[dir])/5 : 1;
                 
                 for(let locX = 0; locX < halfW; locX++) {
                     for(let locY = locX; locY < tileH-locX-1; locY++) {
                         const tp = transform(locX, locY, dir);
                         const sp = transform(locX, locY, id);
-                        tex.setAt(x*tileW + tp.x, y*tileH + tp.y, this.tileTexture.sampleAt(sp.x, sp.y));
+                        tex.setAt(x*tileW + tp.x, y*tileH + tp.y, this.tileTexture.sampleAt(sp.x, sp.y).map(v => v*fac));
                     }
                 }
             }
@@ -144,6 +146,24 @@ export default class Renderer {
         }
         ctx.putImageData(imgData, 0, 0);
         this.floorCanvasData = imgData.data;
+    }
+
+    renderMinimap() {
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+        const w = this.generator.size;
+        canvas.width = canvas.height = w;
+        let imgDat = ctx.getImageData(0, 0, w, w);
+        for(let x = 0; x < w; x++)
+        for(let y = 0; y < w; y++) {
+            const i = (y * w + x) * 4;
+            imgDat.data[i] =
+            imgDat.data[i+1] =
+            imgDat.data[i+2] = this.generator.sampleFloorMap(x, y)? 0 : 128;
+            imgDat.data[i+3] = 255;
+        }
+        ctx.putImageData(imgDat, 0, 0);
+        this.minimap = canvas;
     }
 
     sampleFloor(x, y, lum = 1) {
@@ -182,7 +202,10 @@ export default class Renderer {
             // const relDistance = Math.tan(screenZ / d * 1.57) * 0.125 * farPlane; // tangent bias 
             const relDistance = (screenZ / d)**2 * farPlane; // square bias 
             const rx = relDistance;
-            const lum = (1 - screenZ / d);
+            // const lum = (1 - screenZ / d);
+            // const lum = screenZ % 2;
+            // const lum = Math.random();
+            const lum = 1-relDistance/farPlane;
             for (let screenX = 0; screenX < w; screenX++) {
                 const ry = relDistance * (screenX / w * 2 - 1);
                 const x = this.x + cosAngle * rx - sinAngle * ry;
@@ -194,14 +217,15 @@ export default class Renderer {
 
                 const col = this.sampleFloor(x, y, lum);
                 const buf = depthBuffer[screenX];
-                let stripe = 18;
+                const stripe = 18;
                 for (let screenY = buf; screenY < screenHeight; screenY++) {
                     // stripe += Math.random()*0.01;
                     const worldY = (relH * h - 1 - screenY) * relDistance;
                     const i = ((h - screenY) * w + screenX) * 4;
-                    imgData.data[i] = col[0] * ~~(mod(worldY, stripe) * 2 / stripe);
-                    imgData.data[i + 1] = col[1]
-                    imgData.data[i + 2] = col[2];
+                    const fac = ~~(1 + mod(worldY, stripe) * 2 / stripe);
+                    imgData.data[i] = col[0] * fac; // - Math.random()*20;
+                    imgData.data[i + 1] = col[1] * fac; // - Math.random()*20;
+                    imgData.data[i + 2] = col[2] * fac; // - Math.random()*20;
                     imgData.data[i + 3] = 255;
                 }
                 if (screenHeight > buf) depthBuffer[screenX] = screenHeight;
@@ -213,6 +237,8 @@ export default class Renderer {
             let image = this.imgCorolla[this.carFrame];
             ctx.drawImage(image, ~~(w / 2 - image.width / 2), ~~(h * 0.8 - image.height / 2));
         }
+
+        ctx.drawImage(this.minimap, 0, 0);
 
         let t = (Date.now() - t0);
         // console.log(`render time: ${t}ms, ${1000/t}fps`);
