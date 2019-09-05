@@ -1,11 +1,5 @@
 import { mod } from "./generator.js";
 
-const COLOR_TABLE = [
-    0x777777,
-    0x121212,
-    0x126612,
-].map(val => [val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff]);
-
 export class Texture {
     constructor(w, h) {
         this.data = new Array(w*h);
@@ -13,6 +7,7 @@ export class Texture {
         this.height = h;
     }
 
+    // TODO do this compile time / paste manually
     static fromImage(img) {
         let canvas = document.createElement("canvas");
         let w = canvas.width = img.width;
@@ -74,6 +69,7 @@ export default class Renderer {
         return img;
     }
 
+    // TODO remove and just use loadImage
     async loadImages(name, numberOfFrames, format = "png") {
         let images = [];
         let promises = [];
@@ -129,23 +125,7 @@ export default class Renderer {
             }
         }
 
-        
-        let canvas = document.createElement("canvas");
-        canvas.width = tex.width;
-        canvas.height = tex.height;
-        document.querySelector("footer").append(canvas);
-        let ctx = canvas.getContext("2d");
-        this.floorCanvas = canvas;
-        let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        for(let i = 0; i < tex.width * tex.height; i++) {
-            if(!tex.data[i]) continue;
-            for(let j = 0; j < 3; j++) {
-                imgData.data[i*4+j] = tex.data[i][j];
-            }
-            imgData.data[i*4+3] = 255;
-        }
-        ctx.putImageData(imgData, 0, 0);
-        this.floorCanvasData = imgData.data;
+        this.floorCanvasData = tex;
     }
 
     renderMinimap() {
@@ -166,16 +146,12 @@ export default class Renderer {
         this.minimap = canvas;
     }
 
-    sampleFloor(x, y, lum = 1) {
-        x = mod(x * this.tileTexture.width, this.floorCanvas.width);
-        y = mod(y * this.tileTexture.height, this.floorCanvas.height);
-        let i = (y * this.floorCanvas.width + x) * 4;
-        return [
-            (1-lum) * 0x22 + lum * this.floorCanvasData[i], 
-            (1-lum) * 0x22 + lum * this.floorCanvasData[i+1], 
-            (1-lum) * 0x22 + lum * this.floorCanvasData[i+2], 
-            (1-lum) * 0x22 + lum * this.floorCanvasData[i+3]
-        ];
+    sampleFloor(x, y) {
+        x = mod(x * this.tileTexture.width, this.floorCanvasData.width);
+        y = mod(y * this.tileTexture.height, this.floorCanvasData.height);
+        let sample = this.floorCanvasData.sampleAt(x,y);
+        // return sample.map(v => (1-lum) * 0x22 + lum * v);
+        return sample;
     }
 
     render() {
@@ -184,8 +160,6 @@ export default class Renderer {
         const h = this.canvas.height;
         const d = 180;
         const farPlane = 12; 
-        // let nearPlane = .1; // units
-        // let fovRatio = 1;
 
         let ctx = this.canvas.getContext("2d");
         ctx.clearRect(0, 0, w, h);
@@ -195,16 +169,12 @@ export default class Renderer {
 
         let depthBuffer = new Array(w).fill(0);
 
-        // iterate from z to 1
-        // for (let screenZ = d; screenZ >= 0; screenZ--) {
+        // iterate from front to back
         for (let screenZ = 0; screenZ <= d; screenZ++) {
             // iterate from left to right
             // const relDistance = Math.tan(screenZ / d * 1.57) * 0.125 * farPlane; // tangent bias 
             const relDistance = (screenZ / d)**2 * farPlane; // square bias 
             const rx = relDistance;
-            // const lum = (1 - screenZ / d);
-            // const lum = screenZ % 2;
-            // const lum = Math.random();
             const lum = 1-relDistance/farPlane;
             for (let screenX = 0; screenX < w; screenX++) {
                 const ry = relDistance * (screenX / w * 2 - 1);
@@ -215,17 +185,14 @@ export default class Renderer {
                 const relH = (sample - this.z + relDistance) / (relDistance * 2) + this.horizon; 
                 const screenHeight = Math.min(~~(relH * h), h);
 
-                const col = this.sampleFloor(x, y, lum);
+                const col = this.sampleFloor(x, y);
                 const buf = depthBuffer[screenX];
-                const stripe = 18;
                 for (let screenY = buf; screenY < screenHeight; screenY++) {
-                    // stripe += Math.random()*0.01;
                     const worldY = (relH * h - 1 - screenY) * relDistance;
                     const i = ((h - screenY) * w + screenX) * 4;
-                    const fac = ~~(1 + mod(worldY, stripe) * 2 / stripe);
-                    imgData.data[i] = col[0] * fac; // - Math.random()*20;
-                    imgData.data[i + 1] = col[1] * fac; // - Math.random()*20;
-                    imgData.data[i + 2] = col[2] * fac; // - Math.random()*20;
+                    const fac = ~~(1 + mod(worldY, 18) * 2 / 18);
+                    for(let j = 0; j < 3; j++)
+                        imgData.data[i+j] = (1-lum) * 0x22 + lum * (col[j] * fac);
                     imgData.data[i + 3] = 255;
                 }
                 if (screenHeight > buf) depthBuffer[screenX] = screenHeight;
@@ -239,6 +206,10 @@ export default class Renderer {
         }
 
         ctx.drawImage(this.minimap, 0, 0);
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.rect(mod(this.x, this.generator.size), mod(this.y, this.generator.size), 1, 1);
+        ctx.fill();
 
         let t = (Date.now() - t0);
         // console.log(`render time: ${t}ms, ${1000/t}fps`);
