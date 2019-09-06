@@ -1,0 +1,23 @@
+{
+  "name": "js13k",
+  "version": "1.0.0",
+  "description": "my js13k 2019 entry",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nilsgawlik/js13k2919.git"
+  },
+  "author": "Nils Gawlik",
+  "license": "",
+  "bugs": {
+    "url": "https://github.com/nilsgawlik/js13k2919/issues"
+  },
+  "homepage": "https://github.com/nilsgawlik/js13k2919#readme",
+  "devDependencies": {
+    "gulp": "^4.0.2",
+    "webpack-stream": "^5.2.1"
+  }
+}
