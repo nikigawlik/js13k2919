@@ -5,8 +5,7 @@ registerKey("right", [68, 39]);
 registerKey("up", [87, 38]);
 registerKey("down",[83, 40]);
 
-
-export function registerKey(key, keyCodes) {
+function registerKey(key, keyCodes) {
     keys[key] = false;
     document.addEventListener("keydown", (ev) => { 
         if(keyCodes.includes(ev.keyCode)) {
