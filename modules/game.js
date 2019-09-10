@@ -9,6 +9,8 @@ const TRACT = 0.1;
 const FRIC = 0.1;
 const BACKFRIC = 0.3;
 
+const DEBUG = true;
+
 class Car {
     constructor(renderer, generator) {
         this.x = 0;
@@ -125,11 +127,17 @@ window.addEventListener("load", () => {
 
 async function startGame() {
     let audio = new Audio();
-    let body = document.querySelector("body");
-    body.onkeydown = ev => {
+    // TODO uncomment in final build
+    if(DEBUG)
+    {
         audio.start();
-        body.onkeydown = null;
-    };
+    } else {
+        let body = document.querySelector("body");
+        body.onkeydown = ev => {
+            audio.start();
+            body.onkeydown = null;
+        };
+    }
     let gen = new Generator(32);
     let rend = new Renderer(gen, document.querySelector("canvas.game"));
     await rend.load();
