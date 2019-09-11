@@ -1,4 +1,5 @@
 import Generator from "./generator.js";
+import {iterateQGrid} from "./generator.js";
 import Renderer from "./renderer.js";
 import { keyIsDown } from "./keyHandler.js";
 import Audio from "./audio.js";
@@ -9,7 +10,9 @@ const TRACT = 0.1;
 const FRIC = 0.1;
 const BACKFRIC = 0.3;
 
-const DEBUG = true;
+const DEBUG = true; // TODO flip
+
+const MAP_SIZE = 32;
 
 class Car {
     constructor(renderer, generator) {
@@ -121,6 +124,77 @@ class Car {
     }
 }
 
+class GameManager {
+    constructor(renderer, generator, car) {
+        this.level = 2;
+        this.pizzasCollected = 0;
+        this.pizzasToCollect = 0;
+        this.renderer = renderer;
+        this.generator = generator;
+        this.car = car;
+        this.pizzas = [];
+        this.startObj = null;
+    }
+
+    startLevel() {
+        // start of level
+        this.pizzasToCollect = this.level;
+        this.pizzasCollected = 0;
+        this.placeObjects();
+        this.renderer.setText("Collect the pizzas!", "red");
+    }
+
+    placeObjects() {
+        this.pizzas = [];
+        let positions = [];
+        for(let p of iterateQGrid(MAP_SIZE/4, MAP_SIZE/4)) { // TODO go back to normal size
+            p.x += 0.5;
+            p.y += 0.5;
+            positions.push(p);
+        }
+        // only use streets
+        positions = positions.filter(p => this.generator.sampleFloorMap(p.x, p.y) == 1);
+
+        // select a few random positions for pizzas
+        for(let i = 0; i < this.pizzasToCollect; i++) {
+            let pizza = positions.splice(~~(Math.random() * positions.length), 1)[0];
+            pizza.spriteIndex = 0;
+            this.pizzas.push(pizza);
+        }
+
+        if(!this.startObj) {
+            // select the start position
+            this.startObj = positions.splice(~~(Math.random() * positions.length), 1)[0];
+            this.startObj.spriteIndex = 1;
+            this.car.x = this.startObj.x;
+            this.car.y = this.startObj.y;
+        }
+
+        this.renderer.pizzaPositions = this.pizzas;
+    }
+
+    update() {
+        if(this.pizzas.length > 0) {
+            for(let pizza of this.pizzas) {
+                if((pizza.x - this.car.x)**2 + (pizza.y - this.car.y)**2 < 0.25**2) {
+                    pizza.collected = true;
+                    this.pizzasCollected++;
+                    this.renderer.setSuperText(`${this.pizzasCollected} / ${this.pizzasToCollect} pizzas\ncollected!!!`)
+                }
+            }
+            this.pizzas = this.pizzas.filter(p => !p.collected);
+            this.renderer.pizzaPositions = this.pizzas;
+        } else {
+            this.renderer.setText("Return to start!", "yellow")
+            this.renderer.pizzaPositions = [this.startObj];
+            if((this.startObj.x - this.car.x)**2 + (this.startObj.y - this.car.y)**2 < 0.4**2) {
+                this.level++;
+                this.startLevel();
+            }
+        }
+    }
+}
+
 window.addEventListener("load", () => {
     startGame();
 });
@@ -138,16 +212,15 @@ async function startGame() {
             body.onkeydown = null;
         };
     }
-    let gen = new Generator(32);
+    let gen = new Generator(MAP_SIZE);
     let rend = new Renderer(gen, document.querySelector("canvas.game"));
     await rend.load();
     let car = new Car(rend, gen);
-    do {
-        car.x = ~~(Math.random() * gen.size) + 0.5;
-        car.y = ~~(Math.random() * gen.size) + 0.5;
-    } while(gen.sampleFloorMap(car.x, car.y) != 1 || gen.sampleFloorMap(car.x+1, car.y) != 1)
+    let gm = new GameManager(rend, gen, car);
+    gm.startLevel();
 
     window.setInterval(() => {
+        gm.update();
         car.update();
         audio.update();
     }, 1000/30)

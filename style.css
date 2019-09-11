@@ -4,18 +4,16 @@ canvas {
 }
 
 canvas.game {
+    display: block;
+    margin: 0 auto;
     width: 100%;
+    max-width: 768px;
     height: auto;
     padding:0;
-    margin: 0;
     background-color: #222;
 }
 
 body {
     padding: 0;
-    margin: 0;
-}
-
-img.sprite {
-    display: none;
-}
+    background-color: #222;
+}  

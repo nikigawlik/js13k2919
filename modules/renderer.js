@@ -40,6 +40,8 @@ export class Texture {
     }
 }
 
+const SUPER_TEXT_TIME = 120;
+
 export default class Renderer {
     constructor(generator, canvas) {
         this.generator = generator;
@@ -50,12 +52,24 @@ export default class Renderer {
         this.angle = 0;
         this.horizon = 0.2;
 
-        this.pizzaX = 3.5;
-        this.pizzaY = 3.5;
+        this.infoText = "";
+        this.infoTextStyle = "red";
+        this.pizzaPositions = [];
+        this.startPos = null;
 
         this.carFrame = 1;
         this.floorCanvas = null;
         this.spritesheet = null;
+    }
+
+    setText(str, style) {
+        this.infoText = str.split("").join(" ");
+        this.infoTextStyle = style;
+    }
+
+    setSuperText(str) {
+        this.superText = str;// str.split("").join(" ");
+        this.superTextTimer = SUPER_TEXT_TIME;
     }
 
     async load() {
@@ -66,7 +80,9 @@ export default class Renderer {
             this.getImageFromSpritesheet(0, 0, 32, 16, true)
         ];
 
-        this.imgPizza = this.getImageFromSpritesheet(32, 0, 32, 32);
+        this.indexedSprites = [];
+        this.indexedSprites[0] = this.getImageFromSpritesheet(32, 0, 32, 32);
+        this.indexedSprites[1] = this.getImageFromSpritesheet(80, 0, 32, 32);
 
         // load tile data
         this.tileTexture = Texture.fromCanvas(await this.getImageFromSpritesheet(64, 0, 16, 16));
@@ -169,23 +185,13 @@ export default class Renderer {
         const farPlane = 12; 
 
         let ctx = this.canvas.getContext("2d");
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, w, h);
         let imgData = ctx.getImageData(0, 0, w, h);
         const cosAngle = Math.cos(this.angle);
         const sinAngle = Math.sin(this.angle);
 
         let depthBuffer = new Array(w).fill(0);
-
-        // Crazy pizza math
-        const pizzaRY = (this.pizzaY - (this.y + sinAngle * (this.pizzaX - this.x) / cosAngle)) / (sinAngle * sinAngle / cosAngle + cosAngle);
-        const pizzaRX = (this.pizzaX - this.x + sinAngle * pizzaRY) / cosAngle;
-        const pizzaSX = ((pizzaRY / pizzaRX) + 1) / 2 * w;
-        let pizzaSZ = Math.sqrt(pizzaRX / farPlane) * d;
-        
-        const samplePizza = this.generator.sampleHeightmap(this.pizzaX, this.pizzaY);
-        const relPizzaH = (samplePizza - this.z + pizzaRX) / (pizzaRX * 2) + this.horizon; 
-        const pizzaScale = 1 / pizzaRX; 
-        const pizzaSY = ~~(relPizzaH * h);
 
         // iterate from front to back
         for (let screenZ = 0; screenZ <= d; screenZ++) {
@@ -222,11 +228,27 @@ export default class Renderer {
             let image = this.imgCorolla[this.carFrame];
             ctx.drawImage(image, ~~(w / 2 - image.width / 2), ~~(h * 0.8 - image.height / 2), image.width, image.height);
         }
+
+        // draw pizzas
         
-        if(pizzaSZ > 0) {
-            let pizzaW = this.imgPizza.width * pizzaScale;
-            let pizzaH = this.imgPizza.height * pizzaScale;
-            ctx.drawImage(this.imgPizza, pizzaSX - pizzaW/2, h-pizzaSY - pizzaH/2, pizzaW, pizzaH);
+        for(let pizzaPos of this.pizzaPositions) {
+            // Crazy pizza math
+            const pizzaRY = (pizzaPos.y - (this.y + sinAngle * (pizzaPos.x - this.x) / cosAngle)) / (sinAngle * sinAngle / cosAngle + cosAngle);
+            const pizzaRX = (pizzaPos.x - this.x + sinAngle * pizzaRY) / cosAngle;
+            const pizzaSX = ((pizzaRY / pizzaRX) + 1) / 2 * w;
+            const pizzaSZ = Math.sqrt(pizzaRX / farPlane) * d;
+            
+            const samplePizza = this.generator.sampleHeightmap(pizzaPos.x, pizzaPos.y);
+            const relPizzaH = (samplePizza - this.z + pizzaRX) / (pizzaRX * 2) + this.horizon; 
+            const pizzaScale = 1 / pizzaRX; 
+            const pizzaSY = ~~(relPizzaH * h);
+
+            if(pizzaSZ > 0) {
+                let img = this.indexedSprites[pizzaPos.spriteIndex];
+                let pizzaW = img.width * pizzaScale;
+                let pizzaH = img.height * pizzaScale;
+                ctx.drawImage(img, pizzaSX - pizzaW/2, h-pizzaSY - pizzaH/2, pizzaW, pizzaH);
+            }
         }
 
         ctx.drawImage(this.minimap, 0, 0);
@@ -234,6 +256,32 @@ export default class Renderer {
         ctx.beginPath();
         ctx.rect(mod(this.x, this.generator.size), mod(this.y, this.generator.size), 1, 1);
         ctx.fill();
+
+        // small normal text
+        ctx.font = "8px Arial";
+        ctx.textAlign = "center";
+        let a = (t0%100)/100*Math.PI;
+        let tx = w/2 + Math.cos(a);
+        let ty = h-5 + Math.sin(a);
+        ctx.strokeStyle = "black";
+        ctx.fillStyle = this.infoTextStyle;
+        ctx.strokeText(this.infoText, tx, ty); 
+        ctx.fillText(this.infoText, tx, ty); 
+
+        // super text
+        this.superTextTimer--;
+        if(this.superTextTimer > 0) {
+            let sc = Math.sin((this.superTextTimer/SUPER_TEXT_TIME)**8 * Math.PI);
+            let rot = (1 - this.superTextTimer/SUPER_TEXT_TIME) * .5;
+            ctx.translate(w/2, h/2);
+            ctx.rotate(rot);
+            ctx.scale(sc,sc);
+            ctx.font = "32px Arial";
+            ctx.strokeStyle = "2px solid red";
+            ctx.fillStyle = "white";
+            ctx.strokeText(this.superText, 0, 0, w*0.8); 
+            ctx.fillText(this.superText, 0, 0, w*0.8); 
+        }
 
         let t = (Date.now() - t0);
         // console.log(`render time: ${t}ms, ${1000/t}fps`);

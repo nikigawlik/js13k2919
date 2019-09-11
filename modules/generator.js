@@ -127,7 +127,7 @@ export default class Generator {
     }
 }
 
-function* iterateQGrid(w, h) {
+export function* iterateQGrid(w, h) {
     for (let x = 0; x < w; x++)
         for (let y = 0; y < h; y++) {
             yield { x: x, y: y, index: y*w+x};

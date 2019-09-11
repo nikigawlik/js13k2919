@@ -25,7 +25,7 @@ function defaultTask(cb) {
                             compress: {},
                             mangle: {
                                 properties: {
-                                    reserved: ["keyIsDown", "mod"], // for some reason webpack cant handle these exports
+                                    reserved: ["keyIsDown", "mod", "iterateQGrid"], // for some reason webpack cant handle these exports
                                     // debug: "",
                                     undeclared: true,
                                 }
