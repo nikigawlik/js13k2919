@@ -142,6 +142,11 @@ async function startGame() {
     let rend = new Renderer(gen, document.querySelector("canvas.game"));
     await rend.load();
     let car = new Car(rend, gen);
+    do {
+        car.x = ~~(Math.random() * gen.size) + 0.5;
+        car.y = ~~(Math.random() * gen.size) + 0.5;
+    } while(gen.sampleFloorMap(car.x, car.y) != 1 || gen.sampleFloorMap(car.x+1, car.y) != 1)
+
     window.setInterval(() => {
         car.update();
         audio.update();
