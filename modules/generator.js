@@ -91,6 +91,12 @@ export default class Generator {
 
         // calculate height map
         for (let p of iterateQGrid(size, size)) {
+            let distanceToEdge = Math.min(p.x, p.y, size-1-p.x, size-1-p.y);
+            if(distanceToEdge == 0) 
+                layers[0].data[p.index] = 0;
+            else if(distanceToEdge == 1) 
+                layers[0].data[p.index] = 1;
+            
             let height = layers.map((sim) => (1 - sim.data[p.index])).reduce((a, b) => a + b);
             height = layers[0].data[p.index] ? 0 : height;
             this.heightmap[p.index] = height;
@@ -101,7 +107,7 @@ export default class Generator {
         // return 0;
         // return Math.random() < 0.05? .5 : 0;
         // if(x >= this.size || y >= this.size || x < 0 || y < 0) return 0;
-        const hm = this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)];
+        const hm = this.heightmap[(clamp(y, this.size) * this.size) + clamp(x, this.size)];
         return hm || this.sampleGroundHeightmap(x, y);
     }
 
@@ -115,15 +121,15 @@ export default class Generator {
     }
     
     sampleFloorMap(x, y) {
-        return this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)];
+        return this.floorMap[(clamp(y, this.size) * this.size) + clamp(x, this.size)];
     }
     
     setFloorMap(x, y, val) {
-        this.floorMap[(mod(y, this.size) * this.size) + mod(x, this.size)] = val;
+        this.floorMap[(clamp(y, this.size) * this.size) + clamp(x, this.size)] = val;
     }
     
     setHeightmap(x, y, val) {
-        this.heightmap[(mod(y, this.size) * this.size) + mod(x, this.size)] = val;
+        this.heightmap[(clamp(y, this.size) * this.size) + clamp(x, this.size)] = val;
     }
 }
 
@@ -134,6 +140,7 @@ export function* iterateQGrid(w, h) {
         }
 }
 
-export function mod(x, n) {
-    return ~~(((x%n)+n)%n);
+export function clamp(x, n) {
+    return Math.min(Math.max(~~x, 0), n-1);
+    // return ~~(((x%n)+n)%n);
 }

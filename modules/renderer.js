@@ -1,4 +1,4 @@
-import { mod } from "./generator.js";
+import { clamp } from "./generator.js";
 
 export class Texture {
     constructor(w, h) {
@@ -170,8 +170,8 @@ export default class Renderer {
     }
 
     sampleFloor(x, y) {
-        x = mod(x * this.tileTexture.width, this.floorCanvasData.width);
-        y = mod(y * this.tileTexture.height, this.floorCanvasData.height);
+        x = clamp(x * this.tileTexture.width, this.floorCanvasData.width);
+        y = clamp(y * this.tileTexture.height, this.floorCanvasData.height);
         let sample = this.floorCanvasData.sampleAt(x,y);
         // return sample.map(v => (1-lum) * 0x22 + lum * v);
         return sample;
@@ -214,7 +214,7 @@ export default class Renderer {
                 for (let screenY = buf; screenY < screenHeight; screenY++) {
                     const worldY = (relH * h - 1 - screenY) * relDistance;
                     const i = ((h - screenY) * w + screenX) * 4;
-                    const fac = ~~(1 + mod(worldY, 18) * 2 / 18);
+                    const fac = ~~(1 + ~~(worldY) % 18 * 2 / 18);
                     for(let j = 0; j < 3; j++)
                         imgData.data[i+j] = (1-lum) * 0x22 + lum * (col[j] * fac);
                     imgData.data[i + 3] = 255;
@@ -254,7 +254,7 @@ export default class Renderer {
         ctx.drawImage(this.minimap, 0, 0);
         ctx.fillStyle = "red";
         ctx.beginPath();
-        ctx.rect(mod(this.x, this.generator.size), mod(this.y, this.generator.size), 1, 1);
+        ctx.rect(clamp(this.x, this.generator.size), clamp(this.y, this.generator.size), 1, 1);
         ctx.fill();
 
         // small normal text
