@@ -8,13 +8,14 @@ export class Texture {
     }
 
     // TODO do this compile time / paste manually
-    static fromImage(img) {
-        let canvas = document.createElement("canvas");
-        let w = canvas.width = img.width;
-        let h = canvas.height = img.height;
-        let ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        let data = ctx.getImageData(0, 0, w, h).data;
+    static fromCanvas(canvas) {
+        // let canvas = document.createElement("canvas");
+        // let w = canvas.width = img.width;
+        // let h = canvas.height = img.height;
+        // ctx.drawImage(img, 0, 0);
+        let w = canvas.width;
+        let h = canvas.height;
+        let data = canvas.getContext("2d").getImageData(0, 0, w, h).data;
         let texture = new Texture(w, h);
         for(let i = 0; i < w * h; i++) {
             texture.data[i] = [
@@ -49,14 +50,26 @@ export default class Renderer {
         this.angle = 0;
         this.horizon = 0.2;
 
+        this.pizzaX = 3.5;
+        this.pizzaY = 3.5;
+
         this.carFrame = 1;
         this.floorCanvas = null;
+        this.spritesheet = null;
     }
 
     async load() {
-        this.imgCorolla = await this.loadImages("corolla", 3);
+        this.spritesheet = await this.loadImage("spritesheet");
+        this.imgCorolla = [
+            this.getImageFromSpritesheet(0, 0, 32, 16),
+            this.getImageFromSpritesheet(0, 16, 32, 16),
+            this.getImageFromSpritesheet(0, 0, 32, 16, true)
+        ];
+
+        this.imgPizza = this.getImageFromSpritesheet(32, 0, 32, 32);
+
         // load tile data
-        this.tileTexture = Texture.fromImage(await this.loadImage("tilemap"));
+        this.tileTexture = Texture.fromCanvas(await this.getImageFromSpritesheet(64, 0, 16, 16));
         
         this.renderFloorTexture();
         this.renderMinimap();
@@ -69,21 +82,15 @@ export default class Renderer {
         return img;
     }
 
-    // TODO remove and just use loadImage
-    async loadImages(name, numberOfFrames, format = "png") {
-        let images = [];
-        let promises = [];
-        for (let i = 0; i < numberOfFrames; i++) {
-            let img = document.createElement("img");
-            img.src = `images/${name}${("000" + i).slice(-4)}.${format}`;
-            promises.push(new Promise(resolve => { img.onload = resolve }));
-            images.push(img);
-        }
-
-        for (let promise of promises) {
-            await promise;
-        }
-        return images;
+    getImageFromSpritesheet(x, y, w, h, flipX = false) {
+        let canvas = document.createElement("canvas");
+        // x = w/2; y = h/2;   
+        canvas.width = w;
+        canvas.height = h;
+        let ctx = canvas.getContext("2d");
+        if(flipX) ctx.scale(-1,1);
+        ctx.drawImage(this.spritesheet, -x - (flipX? w : 0), -y);
+        return canvas;
     }
 
     renderFloorTexture() {
@@ -169,6 +176,17 @@ export default class Renderer {
 
         let depthBuffer = new Array(w).fill(0);
 
+        // Crazy pizza math
+        const pizzaRY = (this.pizzaY - (this.y + sinAngle * (this.pizzaX - this.x) / cosAngle)) / (sinAngle * sinAngle / cosAngle + cosAngle);
+        const pizzaRX = (this.pizzaX - this.x + sinAngle * pizzaRY) / cosAngle;
+        const pizzaSX = ((pizzaRY / pizzaRX) + 1) / 2 * w;
+        let pizzaSZ = Math.sqrt(pizzaRX / farPlane) * d;
+        
+        const samplePizza = this.generator.sampleHeightmap(this.pizzaX, this.pizzaY);
+        const relPizzaH = (samplePizza - this.z + pizzaRX) / (pizzaRX * 2) + this.horizon; 
+        const pizzaScale = 1 / pizzaRX; 
+        const pizzaSY = ~~(relPizzaH * h);
+
         // iterate from front to back
         for (let screenZ = 0; screenZ <= d; screenZ++) {
             // iterate from left to right
@@ -202,7 +220,13 @@ export default class Renderer {
         ctx.putImageData(imgData, 0, 0);
         if (this.imgCorolla) {
             let image = this.imgCorolla[this.carFrame];
-            ctx.drawImage(image, ~~(w / 2 - image.width / 2), ~~(h * 0.8 - image.height / 2));
+            ctx.drawImage(image, ~~(w / 2 - image.width / 2), ~~(h * 0.8 - image.height / 2), image.width, image.height);
+        }
+        
+        if(pizzaSZ > 0) {
+            let pizzaW = this.imgPizza.width * pizzaScale;
+            let pizzaH = this.imgPizza.height * pizzaScale;
+            ctx.drawImage(this.imgPizza, pizzaSX - pizzaW/2, h-pizzaSY - pizzaH/2, pizzaW, pizzaH);
         }
 
         ctx.drawImage(this.minimap, 0, 0);
