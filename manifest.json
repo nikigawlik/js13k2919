@@ -1,0 +1,14 @@
+{
+  "name": "Title of the game",
+  "description": "Description of the game, including controls and optional extras for Coil subscribers if you participate in the Web Monetization category.",
+  "images" : {
+    "image_large": "image-big.jpg",
+    "image_thumbnail": "image-small.jpg"
+  },
+  "categories": ["Desktop", "Mobile", "Server", "Web Monetization", "WebXR"],
+  "user" : {
+    "name": "optional",
+    "website": "optional",
+    "twitter": "optional"
+  }
+}
