@@ -1,14 +1,14 @@
 {
-  "name": "Title of the game",
-  "description": "Description of the game, including controls and optional extras for Coil subscribers if you participate in the Web Monetization category.",
+  "name": "Pizza Undelivery",
+  "description": "Here you bring pizzas back to the pizzeria, instead of the other way around. This retro style racing game is about navigating a randomly generated 3D city in your 1986 Toyota Corolla, while listening to hand-coded floatbeat music and sound effects. Another highlight is the custom 3D rendering engine implemented in JavaScript (that might not work on slower machines, sorry).",
   "images" : {
-    "image_large": "image-big.jpg",
-    "image_thumbnail": "image-small.jpg"
+    "image_large": "images/image_large.png",
+    "image_thumbnail": "images/image_thumbnail.png"
   },
-  "categories": ["Desktop", "Mobile", "Server", "Web Monetization", "WebXR"],
+  "categories": ["Desktop"],
   "user" : {
-    "name": "optional",
-    "website": "optional",
-    "twitter": "optional"
+    "name": "Nils Gawlik",
+    "website": "nilsgawlik.github.io",
+    "twitter": "@nilsgawlik"
   }
 }
