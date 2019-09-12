@@ -1,7 +1,6 @@
 let random = Math.random;
 let sign = Math.sign;
 let sin = Math.sin;
-let min = Math.min;
 let max = Math.max;
 const PI = Math.PI;
 
