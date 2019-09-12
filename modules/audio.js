@@ -2,15 +2,104 @@ let random = Math.random;
 let sign = Math.sign;
 let sin = Math.sin;
 let max = Math.max;
+let atan = Math.atan;
 const PI = Math.PI;
 
 export default class Audio {
     constructor() {
+        // Create an audio context
         this.ctx = new AudioContext();
     }
 
+    playCrash(volume = 1) {
+        const srate = 8000;
+        const length = srate*1;
+        let buffer = this.ctx.createBuffer(1, length, srate);
+        let data = buffer.getChannelData(0);
+        let p1 = 90 + random() * 64;
+
+        for(let t = 0; t < length; t++) {
+            let tt = t;
+            t = t & ~(1 << ~~(t/p1));
+            let env = (1- t / length);
+            let env2 = (1- t / 2000);
+            // const env = 1-(t % (1<<12) / (1<<12));
+            let kick = sin(env**32*0x5f);
+            data[tt] = atan(
+                kick * env2**5
+            ) / (PI/2) * volume
+            ;
+            t = tt;
+        }
+
+        let source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        // source.loop = true;
+
+        source.connect(this.ctx.destination);
+        source.start();
+    }
+
+    playCollect(volume = 1) {
+        const srate = 8000;
+        const length = 8000;
+        let buffer = this.ctx.createBuffer(1, length, srate);
+        let data = buffer.getChannelData(0);
+        let p1 = 1 + random();
+
+        for(let t = 0; t < length; t++) {
+            let tt = t;
+            // t = t & ~(1 << ~~(t/p1));
+            let env = (1- t / 8000);
+            data[tt] = atan(
+                sin(t * .02 * p1 * (t>>9) * (t>>10))
+            ) / (PI/2) * 2 * volume * env**2
+            ;
+            t = tt;
+        }
+
+        let source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        // source.loop = true;
+
+        source.connect(this.ctx.destination);
+        source.start();
+    }
+
+    
+    playLevelFinish(volume = 1) {
+        const srate = 8000;
+        const length = srate*2;
+        let buffer = this.ctx.createBuffer(1, length, srate);
+        let data = buffer.getChannelData(0);
+        let p1 = 1 + random();
+
+        for(let t = 0; t < length; t++) {
+            let tt = t;
+            // t = t & ~(1 << ~~(t/p1));
+            let env = (1 - t / length);
+            const env2 = 1-(t % (1<<10) / (1<<10));
+            data[tt] = atan(
+                sin(t * .05 * p1 * 2**((t>>10)%3)) * sin(env2)**3 * env**3
+                +
+                sin(t * .05 * p1) * env**5
+            ) / (PI/2) * 2 * volume
+            +
+            data[max(tt-1000, 0)] * 0.4
+            ;
+            t = tt;
+        }
+
+        let source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        // source.loop = true;
+
+        source.connect(this.ctx.destination);
+        source.start();
+    }
+    
+
     start() {
-        // Create an audio context
 
         const srate = 12000;
         const length = 1 << 20;
