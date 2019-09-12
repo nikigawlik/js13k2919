@@ -129,21 +129,30 @@ export default class Generator {
             }
         }
 
-        for(let i = 0; i < 1; i++) {
-            layers[0].floodFill(~~(Math.random() * size), ~~(Math.random() * size), 1);
+        // for(let i = 0; i < 1; i++) {
+        //     layers[0].floodFill(~~(Math.random() * size), ~~(Math.random() * size), 1);
+        // }
+
+        for (let p of iterateQGrid(size, size)) {
+            let dh = Math.min(p.x, size-1-p.x);
+            let dv = Math.min(p.y, size-1-p.y);
+            let distanceToEdge = Math.min(dh, dv);
+            if(distanceToEdge == 0 || (dh == 1 && dv == 1)) 
+                layers[0].data[p.index] = 0;
+            else if(distanceToEdge == 1) 
+                layers[0].data[p.index] = 1;
+        }
+        
+        for (let i = 0; i < 16; i++) {
+            layers[0].doPostprocessingStep();
         }
 
         this.floorMap = layers[0].data;
         this.heightmap = []
 
         // calculate height map
-        for (let p of iterateQGrid(size, size)) {
-            let distanceToEdge = Math.min(p.x, p.y, size-1-p.x, size-1-p.y);
-            if(distanceToEdge == 0) 
-                layers[0].data[p.index] = 0;
-            else if(distanceToEdge == 1) 
-                layers[0].data[p.index] = 1;
             
+        for (let p of iterateQGrid(size, size)) {
             let height = layers.map((sim) => (1 - sim.data[p.index])).reduce((a, b) => a + b);
             height = layers[0].data[p.index] ? 0 : height;
             this.heightmap[p.index] = height;

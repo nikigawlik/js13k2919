@@ -3,17 +3,62 @@ canvas {
     image-rendering: pixelated;
 }
 
+main {
+    margin: 0 auto;
+    max-width: 768px;
+    width: 100%;
+    height: auto;
+    padding: 0;
+}
+
 canvas.game {
     display: block;
-    margin: 0 auto;
     width: 100%;
-    max-width: 768px;
     height: auto;
-    padding:0;
     background-color: #222;
+}
+
+.game-overlay {
+    position: absolute;
+    font-family: sans-serif;
+    text-align: center;
+}
+
+ h2 {
+    color: white;
+    font-size: 32px;
+    text-shadow: 4px 4px black;
+}
+
+.game-overlay p {
+    font-size: 24px;
+    color: #eee;
+    text-shadow: 2px 2px black;
+}
+
+.game-overlay em {
+    color: yellow;
+}
+
+.game-overlay button {
+    color: #eee;
+    background-color: #444;
+    text-shadow: 1px 1px black;
+    border: none;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    box-shadow: 2px 2px black;
+}
+
+.game-overlay button:hover {
+    color: #eee;
+    background-color: #666;
 }
 
 body {
     padding: 0;
     background-color: #222;
-}  
+}

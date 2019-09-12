@@ -13,6 +13,8 @@ const BACKFRIC = 0.3;
 const DEBUG = true; // TODO flip
 
 const MAP_SIZE = 32;
+const START_TIME = 60;
+const TIME_INCREASE = 50;
 
 class Car {
     constructor(renderer, generator) {
@@ -27,49 +29,50 @@ class Car {
         this.generator = generator;
     }
 
-    update() {
-        let dx, dy, scl;
-        const acceleration = (keyIsDown("up") - keyIsDown("down")) * ACC;
-        let steering = (keyIsDown("right") - keyIsDown("left"));
-        this.renderer.carFrame = -steering+1;
-        steering *= STEER;
-        
-        dx = Math.cos(this.angle);
-        dy = Math.sin(this.angle);
-        scl = Math.max(Math.min((dx * this.hspd + dy * this.vspd) * 60, 1), -1);
+    update(isPaused) {
+        if(!isPaused) {
 
-        this.angle += steering * scl;
-        this.hspd += Math.cos(this.angle) * acceleration;
-        this.vspd += Math.sin(this.angle) * acceleration;
-        this.x += this.hspd;
-        this.y += this.vspd;
-
-        // friction
-        // sideways
-        dx = -Math.sin(this.angle);
-        dy = Math.cos(this.angle);
-        scl = (dx * this.hspd + dy * this.vspd) * TRACT;
-        this.hspd -= scl * dx;
-        this.vspd -= scl * dy;
-
-        // forw. backw.
-        dx = Math.cos(this.angle);
-        dy = Math.sin(this.angle);
-        scl = (dx * this.hspd + dy * this.vspd);
-        scl *= scl > 0? FRIC : BACKFRIC;
-        this.hspd -= scl * dx;
-        this.vspd -= scl * dy;
-
-        //collision
-        this.handleCircleCollision(this);
-
+            let dx, dy, scl;
+            const acceleration = (keyIsDown("up") - keyIsDown("down")) * ACC;
+            let steering = (keyIsDown("right") - keyIsDown("left"));
+            this.renderer.carFrame = -steering+1;
+            steering *= STEER;
+            
+            dx = Math.cos(this.angle);
+            dy = Math.sin(this.angle);
+            scl = Math.max(Math.min((dx * this.hspd + dy * this.vspd) * 60, 1), -1);
+            
+            this.angle += steering * scl;
+            this.hspd += Math.cos(this.angle) * acceleration;
+            this.vspd += Math.sin(this.angle) * acceleration;
+            this.x += this.hspd;
+            this.y += this.vspd;
+            
+            // friction
+            // sideways
+            dx = -Math.sin(this.angle);
+            dy = Math.cos(this.angle);
+            scl = (dx * this.hspd + dy * this.vspd) * TRACT;
+            this.hspd -= scl * dx;
+            this.vspd -= scl * dy;
+            
+            // forw. backw.
+            dx = Math.cos(this.angle);
+            dy = Math.sin(this.angle);
+            scl = (dx * this.hspd + dy * this.vspd);
+            scl *= scl > 0? FRIC : BACKFRIC;
+            this.hspd -= scl * dx;
+            this.vspd -= scl * dy;
+            
+            //collision
+            this.handleCircleCollision(this);
+        }
+            
         // render
-        this.renderer.x = this.x - dx * .25;
-        this.renderer.y = this.y - dy * .25;
+        this.renderer.x = this.x - Math.cos(this.angle) * .25;
+        this.renderer.y = this.y - Math.sin(this.angle) * .25;
         this.renderer.z = 0.25 + this.generator.sampleGroundHeightmap(this.x, this.y);
         this.renderer.angle = this.angle;
-
-        this.renderer.render();
     }
 
     handleCircleCollision(obj) {
@@ -126,7 +129,7 @@ class Car {
 
 class GameManager {
     constructor(renderer, generator, car) {
-        this.level = 2;
+        this.level = 1;
         this.pizzasCollected = 0;
         this.pizzasToCollect = 0;
         this.renderer = renderer;
@@ -134,6 +137,25 @@ class GameManager {
         this.car = car;
         this.pizzas = [];
         this.startObj = null;
+        this.time = 0;
+        this.isPaused = false;
+        this.overlay = null;
+    }
+
+    resetGame() {
+        this.time = START_TIME;
+        this.startObj = null;
+        this.car.angle = this.car.vspd = this.car.hspd = 0;
+        this.isPaused = true;
+        this.loadOverlay("title-template");
+        this.startLevel();
+        this.overlay.querySelector("button").onclick = (ev) => {
+            this.level = Number(this.overlay.querySelector("input").value);
+            this.overlay.remove();
+            this.overlay = null;
+            this.isPaused = false;
+            this.startLevel();
+        }
     }
 
     startLevel() {
@@ -175,9 +197,30 @@ class GameManager {
     }
 
     update() {
+        // update timer
+        if(!this.isPaused) this.time -= 1/30; // just rely on fixed framerate
+        this.time = Math.max(this.time, 0);
+        this.renderer.timeLeft = Math.floor(this.time);
+
+        if(this.time == 0 && !this.overlay) {
+            // game over screen
+            this.isPaused = true;
+            // dynamic content
+            this.loadOverlay("game-over-template");
+            this.overlay.querySelector("#lnum").append(`${this.level}`);
+            // callbacks
+            this.overlay.querySelector("button").onclick = () => {
+                this.overlay.remove();
+                this.overlay = null;
+                this.isPaused = false;
+                this.resetGame();
+            }
+        }
+
+        // check collection of checkpoints pizzas etc.
         if(this.pizzas.length > 0) {
             for(let pizza of this.pizzas) {
-                if((pizza.x - this.car.x)**2 + (pizza.y - this.car.y)**2 < 0.25**2) {
+                if((pizza.x - this.car.x)**2 + (pizza.y - this.car.y)**2 < 0.3**2) {
                     pizza.collected = true;
                     this.pizzasCollected++;
                     this.renderer.setSuperText(`${this.pizzasCollected} / ${this.pizzasToCollect} pizzas\ncollected!!!`)
@@ -191,9 +234,22 @@ class GameManager {
             if((this.startObj.x - this.car.x)**2 + (this.startObj.y - this.car.y)**2 < 0.4**2) {
                 this.level++;
                 this.renderer.setSuperText(`LEVEL ${this.level}`);
+                this.time += TIME_INCREASE;
                 this.startLevel();
             }
         }
+    }
+
+    loadOverlay(templateID) {
+        this.overlay = document.querySelector(`#${templateID}`).content.cloneNode(true).firstElementChild;
+        let main = document.querySelector("main");
+        main.insertBefore(this.overlay, document.querySelector("main>.game"));
+        // handle resizing
+        let func = (ev) => {
+            this.overlay.setAttribute("style",`width:${~~(main.offsetWidth)}px; height:${~~(main.offsetHeight)}px`);
+        };
+        window.onresize = func;
+        func();
     }
 }
 
@@ -219,11 +275,12 @@ async function startGame() {
     await rend.load();
     let car = new Car(rend, gen);
     let gm = new GameManager(rend, gen, car);
-    gm.startLevel();
+    gm.resetGame();
 
     window.setInterval(() => {
         gm.update();
-        car.update();
-        audio.update();
+        car.update(gm.isPaused);
+        audio.update(gm.isPaused);
+        rend.render(gm.isPaused);
     }, 1000/30)
 }

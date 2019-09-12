@@ -54,6 +54,8 @@ export default class Renderer {
 
         this.infoText = "";
         this.infoTextStyle = "red";
+        this.timeLeft = 0;
+
         this.pizzaPositions = [];
         this.startPos = null;
 
@@ -267,6 +269,15 @@ export default class Renderer {
             }
             ctx.fill();
         }
+
+        // time text
+        ctx.font = "12px Arial";
+        ctx.textAlign = "right";
+        ctx.strokeStyle = "black";
+        ctx.fillStyle = "white";
+        let timeText = `${~~(this.timeLeft/60)}:${("0" + this.timeLeft % 60).substr(-2, 2)}`;
+        ctx.strokeText(timeText, w-2, 12); 
+        ctx.fillText(timeText, w-2, 12); 
 
         // small normal text
         ctx.font = "8px Arial";
