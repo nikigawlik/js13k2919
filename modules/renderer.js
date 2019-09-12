@@ -50,7 +50,7 @@ export default class Renderer {
         this.y = 0.5;
         this.z = 0.35;
         this.angle = 0;
-        this.horizon = 0.2;
+        this.horizon = 0.1;
 
         this.infoText = "";
         this.infoTextStyle = "red";
@@ -142,7 +142,9 @@ export default class Renderer {
                     for(let locY = locX; locY < tileH-locX-1; locY++) {
                         const tp = transform(locX, locY, dir);
                         const sp = transform(locX, locY, id);
-                        tex.setAt(x*tileW + tp.x, y*tileH + tp.y, this.tileTexture.sampleAt(sp.x, sp.y).map(v => v*fac));
+                        let sample = this.tileTexture.sampleAt(sp.x, sp.y);
+                        if(sample)
+                            tex.setAt(x*tileW + tp.x, y*tileH + tp.y, sample.map(v => v*fac));
                     }
                 }
             }
@@ -251,11 +253,20 @@ export default class Renderer {
             }
         }
 
+        // mini map
         ctx.drawImage(this.minimap, 0, 0);
         ctx.fillStyle = "red";
         ctx.beginPath();
         ctx.rect(clamp(this.x, this.generator.size), clamp(this.y, this.generator.size), 1, 1);
         ctx.fill();
+        if(t0 % 250 < 125) {
+            ctx.beginPath();
+            ctx.fillStyle = "#f5cc7a";
+            for(let pizzaPos of this.pizzaPositions) {
+                ctx.rect(clamp(pizzaPos.x, this.generator.size), clamp(pizzaPos.y, this.generator.size), 1, 1);
+            }
+            ctx.fill();
+        }
 
         // small normal text
         ctx.font = "8px Arial";

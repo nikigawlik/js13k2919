@@ -147,7 +147,8 @@ class GameManager {
     placeObjects() {
         this.pizzas = [];
         let positions = [];
-        for(let p of iterateQGrid(MAP_SIZE/4, MAP_SIZE/4)) { // TODO go back to normal size
+        // for(let p of iterateQGrid(MAP_SIZE/4, MAP_SIZE/4)) {
+        for(let p of iterateQGrid(MAP_SIZE, MAP_SIZE)) {
             p.x += 0.5;
             p.y += 0.5;
             positions.push(p);
@@ -189,6 +190,7 @@ class GameManager {
             this.renderer.pizzaPositions = [this.startObj];
             if((this.startObj.x - this.car.x)**2 + (this.startObj.y - this.car.y)**2 < 0.4**2) {
                 this.level++;
+                this.renderer.setSuperText(`LEVEL ${this.level}`);
                 this.startLevel();
             }
         }

@@ -1,10 +1,12 @@
+
+const COS = [1, 0, -1, 0];
+const SIN = [0, 1, 0, -1];
+
 class NoiseLayer {
     constructor(w, h) {
         this.width = w;
         this.height = h;
         this.patternTree = {0:{0:{0:{0:{0:{0:{0:{0:{0:{score:1}}},1:{1:{1:{score:1}}}}},1:{0:{0:{0:{0:{score:-1}}}}}},1:{1:{1:{1:{1:{1:{score:-1}}}}}}},1:{0:{0:{1:{0:{0:{1:{score:1}}},1:{1:{1:{score:1}}}}}}}},1:{1:{0:{1:{1:{0:{1:{1:{score:-1}}}}}}}}},1:{0:{0:{1:{0:{0:{1:{0:{0:{score:1}},1:{1:{score:1}}}}}}}},1:{0:{1:{1:{0:{1:{1:{0:{score:-1}}}}}}},1:{0:{0:{0:{0:{0:{0:{score:1}}}},1:{0:{0:{1:{score:1}}}}}},1:{0:{0:{1:{0:{0:{score:1}}}},1:{1:{1:{1:{score:-1}}}}},1:{1:{0:{0:{0:{score:-1}}},1:{1:{1:{score:-1}}}}}}}}}};
-
-        this.noiseOffset = 0;
 
         this.data = new Array(this.width * this.height);
         this.accumulator = new Array(this.data.length);
@@ -13,39 +15,77 @@ class NoiseLayer {
     }
 
     doSimulationStep() {
-        for (let i = 0; i < this.accumulator.length; i++) {
-            this.accumulator[i] = 0;
-        }
+        this.accumulator.fill(0);
 
         // unfortunately we hard-code size right now (It's just a prototype...)
         const pw = 3;
-        for (let x = 0; x < this.width - (pw - 1); x++)
-            for (let y = 0; y < this.height - (pw - 1); y++) {
-                // find bad matches, find good matches
+        const w = this.width;
+        const h = this.height;
 
+        for (let x = 0; x < w; x++)
+            for (let y = 0; y < h; y++) {
+                // find bad matches, find good matches
                 // get neighborhood
                 let data = [];
                 for (let dy = 0; dy < pw; dy++)
                     for (let dx = 0; dx < pw; dx++) {
-                        let index = this.width * (y + dy) + x + dx;
+                        let index = w * clamp(y + dy, h) + clamp(x + dx, w);
                         data.push(this.data[index]);
                     }
                 let score = this.getMatchScore(data);
                 if (score != 0) {
                     for (let dy = 0; dy < pw; dy++)
                         for (let dx = 0; dx < pw; dx++) {
-                            let index = this.width * (y + dy) + x + dx;
+                            let index = w *  clamp(y + dy, h) + clamp(x + dx, w);
                             this.accumulator[index] += score;
                         }
                 }
             }
 
-        for (let y = 0; y < this.height; y++)
-            for (let x = 0; x < this.width; x++) {
-                let index = y * this.width + x;
+        for (let y = 0; y < h; y++)
+            for (let x = 0; x < w; x++) {
+                let index = y * w + x;
                 let mutate = this.accumulator[index] <= 0;
-                this.data[index] = mutate ? this.sampleNoise(x, y) : this.data[index];
+                this.data[index] = mutate ? this.sampleNoise() : this.data[index];
             }
+    }
+
+    doPostprocessingStep() {
+        for (let x = 0; x < this.width; x++)
+            for (let y = 0; y < this.height; y++) {
+                let sum = 0;
+                for(let d = 0; d < 4; d++)
+                    sum += this.getAt(x+COS[d], y+SIN[d]);
+                if(sum < 2) 
+                    this.data[y*this.width+x] = 0;
+            }
+    }
+
+    floodFill(x, y, value) {
+        let queue = [x,y];
+        let initial = this.getAt(x, y);
+        for(let i = 0; i < 49; i++){
+            if(queue.length == 0) break;
+            y = queue.pop();
+            x = queue.pop();
+            if(this.getAt(x, y) == value) return;
+            this.setAt(x, y, value);
+
+            for(let d = 0; d < 4; d++) {
+                let adj = this.getAt(x+COS[d], y+SIN[d]);
+                if(adj == initial) {
+                    queue.push(x+COS[d], y+SIN[d]);
+                }
+            }
+        }
+    }
+
+    getAt(x, y) {
+        return this.data[(clamp(y, this.height) * this.width) + clamp(x, this.width)];
+    }
+
+    setAt(x, y, value) {
+        this.data[(clamp(y, this.height) * this.width) + clamp(x, this.width)] = value;
     }
 
     getMatchScore(data) {
@@ -65,12 +105,12 @@ class NoiseLayer {
             for (let x = 0; x < this.width; x++) {
                 // seed(Date.now()); // TODO implement seed?
                 let index = y * this.width + x;
-                this.data[index] = this.sampleNoise(x, y);
+                this.data[index] = this.sampleNoise();
             }
     }
 
-    sampleNoise(x, y) {
-        return Math.random() < 0.5 + this.noiseOffset ? 1 : 0;
+    sampleNoise() {
+        return Math.random() < 0.5 ? 1 : 0;
     }
 }
 
@@ -84,6 +124,13 @@ export default class Generator {
             for (let i = 0; i < 100; i++) {
                 layer.doSimulationStep();
             }
+            for (let i = 0; i < 16; i++) {
+                layer.doPostprocessingStep();
+            }
+        }
+
+        for(let i = 0; i < 1; i++) {
+            layers[0].floodFill(~~(Math.random() * size), ~~(Math.random() * size), 1);
         }
 
         this.floorMap = layers[0].data;
@@ -122,14 +169,6 @@ export default class Generator {
     
     sampleFloorMap(x, y) {
         return this.floorMap[(clamp(y, this.size) * this.size) + clamp(x, this.size)];
-    }
-    
-    setFloorMap(x, y, val) {
-        this.floorMap[(clamp(y, this.size) * this.size) + clamp(x, this.size)] = val;
-    }
-    
-    setHeightmap(x, y, val) {
-        this.heightmap[(clamp(y, this.size) * this.size) + clamp(x, this.size)] = val;
     }
 }
 
