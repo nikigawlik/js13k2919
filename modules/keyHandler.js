@@ -4,6 +4,7 @@ registerKey("left", [65, 37]);
 registerKey("right", [68, 39]);
 registerKey("up", [87, 38]);
 registerKey("down",[83, 40]);
+registerKey("exit",[27]);
 
 function registerKey(key, keyCodes) {
     keys[key] = false;

@@ -9,6 +9,9 @@ export default class Audio {
     constructor() {
         // Create an audio context
         this.ctx = new AudioContext();
+        this.master = this.ctx.createGain();
+        this.master.gain.setValueAtTime(0.5, this.ctx.currentTime); // keep it civil!
+        this.master.connect(this.ctx.destination);
     }
 
     playCrash(volume = 1) {
@@ -36,7 +39,7 @@ export default class Audio {
         source.buffer = buffer;
         // source.loop = true;
 
-        source.connect(this.ctx.destination);
+        source.connect(this.master);
         source.start();
     }
 
@@ -62,7 +65,7 @@ export default class Audio {
         source.buffer = buffer;
         // source.loop = true;
 
-        source.connect(this.ctx.destination);
+        source.connect(this.master);
         source.start();
     }
 
@@ -94,7 +97,7 @@ export default class Audio {
         source.buffer = buffer;
         // source.loop = true;
 
-        source.connect(this.ctx.destination);
+        source.connect(this.master);
         source.start();
     }
     
@@ -179,7 +182,7 @@ export default class Audio {
         musicSource.buffer = musicBuffer;
         musicSource.loop = true;
 
-        musicSource.connect(this.ctx.destination);
+        musicSource.connect(this.master);
         musicSource.start();
     }
     

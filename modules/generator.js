@@ -117,7 +117,11 @@ class NoiseLayer {
 export default class Generator {
     constructor(size) {
         this.size = size;
+        this.generate();
+    }
 
+    generate() {
+        let size = this.size;
         let layers = [1, 1, 1, 1].map(f => new NoiseLayer(f * size, f * size));
         // simulate noise and overlay
         for (let layer of layers) {

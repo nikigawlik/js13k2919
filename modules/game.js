@@ -151,18 +151,26 @@ class GameManager {
 
     resetGame() {
         this.time = START_TIME;
-        this.startObj = null;
         this.car.angle = this.car.vspd = this.car.hspd = 0;
         this.isPaused = true;
         this.loadOverlay("title-template");
+        this.startObj = null;
         this.startLevel();
-        this.overlay.querySelector("button").onclick = (ev) => {
+        let buttons = this.overlay.querySelectorAll("button");
+        buttons[0].onclick = (ev) => {
+            this.generator.generate();
+            this.renderer.renderFloorTexture();
+            this.renderer.renderMinimap();
+            this.startObj = null;
+            this.startLevel();
+        };
+        buttons[1].onclick = (ev) => {
             this.level = Number(this.overlay.querySelector("input").value);
             this.overlay.remove();
             this.overlay = null;
             this.isPaused = false;
             this.startLevel();
-        }
+        };
     }
 
     startLevel() {
@@ -209,7 +217,7 @@ class GameManager {
         this.time = Math.max(this.time, 0);
         this.renderer.timeLeft = Math.floor(this.time);
 
-        if(this.time == 0 && !this.overlay) {
+        if((this.time == 0 || keyIsDown("exit")) && !this.overlay) {
             // game over screen
             this.isPaused = true;
             // dynamic content
